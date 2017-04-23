@@ -1,0 +1,6 @@
+export(welchADF.test)
+S3method(print, WelchTestObj)
+S3method(summary, WelchTestObj)
+S3method(summary, WelchTestObjList)
+importFrom("stats", "as.formula", "contr.sum", "integrate", "p.adjust",
+             "pf", "qnorm", "reshape", "runif", "terms")
