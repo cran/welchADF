@@ -1,6 +1,18 @@
 export(welchADF.test)
-S3method(print, WelchTestObj)
-S3method(summary, WelchTestObj)
-S3method(summary, WelchTestObjList)
-importFrom("stats", "as.formula", "contr.sum", "integrate", "p.adjust",
-             "pf", "qnorm", "reshape", "runif", "terms")
+S3method(welchADF.test, default)
+S3method(welchADF.test, formula)
+S3method(welchADF.test, lm)
+S3method(welchADF.test, aov)
+S3method(welchADF.test, lmer)
+S3method(formula, welchADFt)
+S3method(model.frame, welchADFt)
+S3method(confint, welchADFt)
+S3method(format, welchADFt)
+S3method(print, welchADFt)
+S3method(summary, welchADFt)
+S3method(print, summary.welchADFt)
+importFrom("stats", "as.formula", "contr.sum", "formula", "integrate",
+             "p.adjust", "pf", "qnorm", "reformulate", "reshape",
+             "runif", "terms", "getCall", "symnum")
+importFrom("lme4", "subbars", "factorize", "findbars", "nobars")
+importFrom("utils", "capture.output")

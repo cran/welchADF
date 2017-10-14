@@ -20,10 +20,22 @@ womenStereotypeData
 An artificial dataset created by Lix et al. from summary data presented by Wicherts et al. (2005)
 (see the vignette). These authors examined the effects of stereotype threat on women's mathematics ability. 
 Originally there were four different tests administered to study participants (arithmetic,
-number series, word problems, and sums tests); the dataset contains only scores for the arithmetic test
+number series, word problems, and sums tests). The dataset contains only scores for the arithmetic test
 because these scores exhibited a greater magnitude of variance heterogeneity than scores for
 the other tests. It is an unbalanced design with cell sizes ranging from 45 to 50 participants, and a total
 sample size of 283.
+}
+\examples{
+omnibus_LSM <- welchADF.test(womenStereotypeData, response = "y", between.s =
+  c("condition", "sex"), contrast = "omnibus", effect = "condition")
+omnibus_trimmed <- update(omnibus_LSM, trimming = TRUE, effect = NULL) # unset value of "effect"
+pairwise_LSM <- update(omnibus_LSM, contrast = "all.pairwise", effect = c("condition", "sex"))
+pairwise_trimmed <- update(pairwise_LSM, trimming = TRUE)
+pairwise_trimmed_boot <- update(pairwise_trimmed, bootstrap = TRUE, seed = 12345)
+summary(omnibus_LSM)
+summary(omnibus_trimmed)
+summary(pairwise_trimmed)
+summary(pairwise_trimmed_boot)
 }
 \references{
 J.Wicherts, C. Dolan, and D. Hessen. Stereotype threat and group differences in test performance: 

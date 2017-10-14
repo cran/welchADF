@@ -1,7 +1,9 @@
 
+# argument 'only' is a string vector with the effects and combinations specified by the user 
+# in the formula interface of welchADF.test. E.g. only = c("a", "b", "c", "a:b", "a:c")
 .compute.omnibus <- function(data, response, between.s, within.s, subject, effect,
-				trimming, per, bootstrap, numsim_b, effect.size, numsim_es, 
-				standardizer, scaling, alpha, seed, y, nx, levelslist.between.s, levelslist.within.s){
+				trimming, per, bootstrap, numsim_b, effect.size, numsim_es, standardizer, 
+				scaling, alpha, seed, y, nx, levelslist.between.s, levelslist.within.s, only){
 
 	frameNames = names(data)	
 	ncols = ncol(data)
@@ -36,10 +38,15 @@
 		myterms = terms(myformula)
 		terms.matrix.between.s = attr(myterms, "factors")		
 
-		if(is.null(effect)){  	
+		if(is.null(effect)){
 			all.C.matrices = .compose.C.matrices(terms.matrix.between.s, levelslist.between.s)
-			no.between.s.matrix = all.C.matrices[[1]]		  	
+			no.between.s.matrix = all.C.matrices[[1]]
 			all.C.matrices = all.C.matrices[-1]	# drop first matrix corresponding to no between-subject effect
+			if(!is.null(only)){
+			  # Filter out those between-subjects factors not present in only
+			  validMatrices = names(all.C.matrices) %in% only
+			  all.C.matrices = all.C.matrices[validMatrices]
+			}
 		}
 		else{
 			# Select from terms.matrix.between.s the specific between-subject terms involved in the effect argument				
@@ -80,6 +87,11 @@
 			all.U.matrices = .compose.U.matrices(terms.matrix.within.s, levelslist.within.s, length(response))
 			no.within.s.matrix = all.U.matrices[[1]]
 			all.U.matrices = all.U.matrices[-1]	# drop first matrix corresponding to no within-subject effect
+			if(!is.null(only)){
+			  # Filter out those within-subjects factors not present in only
+			  validMatrices = names(all.U.matrices) %in% only
+			  all.U.matrices = all.U.matrices[validMatrices]
+			}
 		}
 		else{
 			# Select from terms.matrix.within.s the specific within-subject terms involved in the effect argument				
@@ -109,6 +121,7 @@
 	if(is.null(effect)){
 		## ------------------------------------------------			
 		## Omnibus test of ALL main and interaction effects
+	  ## (if argument 'only' is not null, test only those indicated on it)
 		## ------------------------------------------------
 		if(!is.null(between.s)){
 			## ------------------------------------------------
@@ -143,45 +156,53 @@
 			## ------------------------------------------------
 			all.mixed.results = vector("list", length(all.C.matrices)*length(all.U.matrices))
 			i = 1
-			for( matC in all.C.matrices){
-				for( matU in all.U.matrices){
-					all.mixed.results[[i]] = wjglm(Cmat = matC, Umat = matU, y = y, nx = nx,
-						trimming = trimming, bootstrap = bootstrap, seed = seed, 
-						standardizer = standardizer, scaling = scaling, 
-						numsim_b = numsim_b, numsim_es = numsim_es,
-						per = per, alpha = alpha, effect.size = effect.size)
-					i = i+1
+			#for( matC in all.C.matrices){
+			#	for( matU in all.U.matrices){
+			for( x1 in 1:length(all.C.matrices)){
+			  for( x2 in 1:length(all.U.matrices)){
+			    validCombination = TRUE
+			    combinationName = paste(names(all.C.matrices)[x1], names(all.U.matrices)[x2], sep = ":")
+			    if(!is.null(only)){
+			      # check if this combination of factors is among those specified by the user
+			      validCombination = combinationName %in% only
+			    }
+			    if(validCombination){
+  				  matC = all.C.matrices[[x1]]
+  				  matU = all.U.matrices[[x2]]
+  					all.mixed.results[[i]] = wjglm(Cmat = matC, Umat = matU, y = y, nx = nx,
+  						trimming = trimming, bootstrap = bootstrap, seed = seed, 
+  						standardizer = standardizer, scaling = scaling, 
+  						numsim_b = numsim_b, numsim_es = numsim_es,
+  						per = per, alpha = alpha, effect.size = effect.size)
+  					
+  					# add space to both sides of ":"
+  					all.mixed.results[[i]]$effect.name = sub(":", " : ", combinationName)
+  					i = i+1
+			    }
 				}
 			}
-			mixed.results.names = lapply(names(all.C.matrices), FUN <- function(matname){
-				paste(matname, names(all.U.matrices), sep = ":")
-			})				
-			mixed.results.names = unlist(mixed.results.names) # flatten the nested lists
-			for(i in 1:length(all.mixed.results)){
-				all.mixed.results[[i]]$effect.name = mixed.results.names[i]
-			}	
 		}
 	
 		result = c(all.between.s.results, all.within.s.results, all.mixed.results)
-		class(result) = "WelchTestObjList"
-		attr(result, "type") = "omnibus"
-		
-		mat = sapply(result, FUN = function(object) c(object$welch.T, object$numeratorDF, object$denominatorDF, object$pval))
-		mat = t(mat)
-		colnames(mat) = c("WJ statistic", "Numerator DF", "Denominator DF", "pval")
-		rownames(mat) = sapply(result, FUN = "[[", "effect.name")
-		
-		attr(result, "summary") = mat
 	}
 	else{
-		result = wjglm(Cmat = unique.C.matrix, Umat = unique.U.matrix, y = y, nx = nx,
+	  # the result will be a list of one element
+		element = wjglm(Cmat = unique.C.matrix, Umat = unique.U.matrix, y = y, nx = nx,
 					trimming = trimming, bootstrap = bootstrap, seed = seed, alpha = alpha,
 					numsim_b = numsim_b, numsim_es = numsim_es,
 					per = per, standardizer = standardizer, scaling = scaling, effect.size = effect.size)
+		
 		efflist = as.list(effect)
 		efflist$sep = ":"						
-		result$effect.name = do.call(paste, efflist)
+		element$effect.name = do.call(paste, efflist)
+		
+		result = list(element)
 	}
+	
+	class(result) = "welchADFt"
+	attr(result, "type") = "omnibus"
+	attr(result, "bootstrap") = bootstrap
+	attr(result, "effect.size") = effect.size
 			
 	return(result)		
 }

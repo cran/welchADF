@@ -29,6 +29,25 @@ Three variables were measured for each tunnel: the number of visits to the
 tunnel during a twenty minute test, the time spent by each subject
 in each of the four tunnels and the latency to first visit of each tunnel.
 }
+\examples{
+omnibus_LSM <- welchADF.test(miceData, response = c("visits", "time", "latency"),
+  between.s = "nurs", within.s = "tunnel", subject = "Subject", contrast = "omnibus")
+# Formula interface, using cbind() to specify a multivariate response.
+omnibus_LSM_formula <- welchADF.test(
+  cbind(visits, time, latency) ~ nurs*tunnel + (tunnel|Subject), data = miceData) 
+pairwise_LSM_nurs <- welchADF.test(miceData, response = c("visits", "time",
+  "latency"), between.s = "nurs", within.s = "tunnel", subject = "Subject",
+  effect = "nurs", contrast = "all.pairwise")
+pairwise_LSM_tunnel <- update(pairwise_LSM_nurs, effect = "tunnel")
+\dontrun{
+  pairwise_nurs_trimmed_boot <- update(pairwise_LSM_nurs, trimming = TRUE, bootstrap = TRUE)
+  pairwise_tunnel_trimmed_boot <- update(pairwise_nurs_trimmed_boot, effect = "tunnel")
+  summary(pairwise_nurs_trimmed_boot)
+}
+summary(omnibus_LSM)
+summary(pairwise_LSM_nurs)
+summary(pairwise_LSM_tunnel)
+}
 \references{
 K. L.Wuensch. Fostering house mice onto rats and deer mice: Effects on response to species odors.
 Animal Learning & Behavior, 20(3):253 - 258, 1992

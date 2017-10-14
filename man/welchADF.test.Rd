@@ -2,17 +2,61 @@
 % Please edit documentation in R/welch-wrapper.R
 \name{welchADF.test}
 \alias{welchADF.test}
+\alias{welchADF.test.formula}
+\alias{welchADF.test.lm}
+\alias{welchADF.test.aov}
+\alias{welchADF.test.lmer}
+\alias{welchADF.test.default}
 \title{General Approximate Degrees of Freedom Solution for Inference and Estimation}
 \usage{
-welchADF.test(data, response, between.s, within.s = NULL, subject = NULL,
-  contrast = c("omnibus", "all.pairwise"), effect = NULL,
+welchADF.test(formula, ...)
+
+\method{welchADF.test}{formula}(formula, data, subset, ...)
+
+\method{welchADF.test}{lm}(formula, ...)
+
+\method{welchADF.test}{aov}(formula, ...)
+
+\method{welchADF.test}{lmer}(formula, ...)
+
+\method{welchADF.test}{default}(formula, response, between.s, within.s = NULL,
+  subject = NULL, contrast = c("omnibus", "all.pairwise"), effect = NULL,
   correction = c("hochberg", "holm"), trimming = FALSE, per = 0.2,
   bootstrap = FALSE, numsim_b = 999, effect.size = FALSE,
   numsim_es = 999, scaling = TRUE, standardize.effsz = TRUE,
-  alpha = 0.05, seed = 0)
+  alpha = 0.05, seed = 0, ...)
 }
 \arguments{
-\item{data}{Data frame with one row for each observation of the response variable(s), and columns to indicate the factor combination to which it corresponds.}
+\item{formula}{A data frame or a formula or an lm object returned by \code{\link[stats]{lm}}.
+If \code{formula} is a data frame, it must have 
+the format described for argument \code{data} of \code{welchADF.test} for class formula.
+If \code{formula} is a formula, it must be a two-sided linear formula object describing the 
+between-subjects effects of the model, with the response variable(s) (surrounded by \code{cbind()} 
+if it is a multivariate response, as \code{cbind(r1, r2, r3)}) on the left of the ~ 
+operator and the terms on the right. Within-subject factors must be specified as a parenthesis
+term on the rhs with the form (w1*w2*...|subject) with 'subject' being the name of the 
+subject ID column, which must be present in the data (cannot be omitted like in the data.frame version)
+e.g. \code{cbind(y1,y2) ~ A*B*C + (B*C|subjet)}. In this example, A would be a between-subject
+factor because it is the only variable not present again on the left side of the parenthesis term
+(where the within-subjects factors are specified). Multi-level or customized structures are not supported, e.g.
+those having strata or more than one random factor. The formula does not affect the results of the tests as 
+no 'model' is actually fit to the data. It only affects the terms displayed as a result of an omnibus
+contrast when no \code{effect} argument is given (which means \emph{run an omnibus test for every effect
+or interaction (up to second order)}). In such case, the factors or interactions not specified in the formula
+will not be applied an omnibus test. In case of a pairwise contrast, the structure in the formula is ignored
+beyond interpreting which variables are between-subject factors and which are within-subjects factors.}
+
+\item{...}{Further arguments to be passed to specialized methods. Should be named arguments.}
+
+\item{data}{A data.frame with the data, formatted as follows: one row per 
+observation of the response variable(s), and as many columns as needed to indicate the 
+factor combination to which the observation corresponds. If necessary, an extra column with
+the subject ID for designs having within-subjects factors
+(can be omitted if there is only one within-subjects factor, see the vignette).}
+
+\item{subset}{A specification of the rows to be used as in \code{\link[stats]{model.frame}}: defaults to all rows. 
+This can be any valid indexing vector (see [.data.frame) for the rows of data 
+or if that is not supplied, a data frame made up of the variables used in formula.}
 
 \item{response}{A string or vector of strings with the name(s) of the column(s) of \code{data} corresponding to the response variable(s). If 
 a vector of strings is provided, the responses are taken as a set of repeated measurements or dependent variables.}
@@ -34,7 +78,7 @@ Defaults to \code{"omnibus"}.}
 contrasts will be applied. 
 If \code{contrast = "all.pairwise"}, then \code{effect} must be \emph{a tagged list} in which the names are the factors, and the elements must be vectors of two strings
 each, indicating 
-If \code{contrast = "omnibus"} but \code{effect} is not specified, then an omnibus contrast will be done separately for each of the effects.
+If \code{contrast = "omnibus"} but \code{effect} is not specified, then an omnibus contrast will be done separately for each of the effects and also all possible interactions.
 If \code{contrast = "omnibus"} and \code{effect} is a vector of strings, then only \emph{one} contrast will be done, involving the simultaneous interaction of all effects
 indicated in the \code{effect} vector (i.e. no other interaction or main effect contrasts will be performed).}
 
@@ -72,25 +116,60 @@ robust estimators are adopted. \code{FALSE} means no scaling factor will be used
 
 \item{seed}{Initial seed (positive integer) for the (R default) random number generator. Defaults to NULL (seed taken from the current time).}
 }
-\description{
-Computes the Welch-James statistic based on the SAS code by H.J. Keselman, R.R. Wilcox and L.M. Lix.
+\value{
+An object of class "welchADFt" which is a list of lists (one sub-list per effect, even if there is only one).
+  There are methods \code{\link[welchADF]{print.welchADFt}} and \code{\link[welchADF]{summary.welchADFt}}
 }
+\description{
+Computes the Welch-James statistic with Approximate Degrees of Freedom, 
+based on the SAS code by H.J. Keselman, R.R. Wilcox and L.M. Lix.
+}
+\section{Methods (by class)}{
+\itemize{
+\item \code{formula}: Specialized method that accepts a formula
+
+\item \code{lm}: Specialized method that accepts a linear model object of class \code{\link[stats]{lm}}
+
+\item \code{aov}: Specialized method that accepts an Analysis of Variance Model of class \code{\link[stats]{aov}}
+
+\item \code{lmer}: Specialized method that accepts a Linear Mixed-Effects Model of class \code{\link[lme4]{lmer}}
+
+\item \code{default}: Default method that accepts a data.frame (see argument \code{formula}) and where 
+factors are passed as strings corresponding to column names
+}}
+
 \examples{
-# Two-way factorial design. See the vignette
-omnibus_LSM = welchADF.test(womenStereotypeData, response = "y", between.s = 
-c("condition", "sex"), contrast = "omnibus")
-omnibus_trimmed = welchADF.test(womenStereotypeData, response = "y", between.s = 
-c("condition", "sex"), contrast = "omnibus", trimming = TRUE)
-pairwise_LSM = welchADF.test(womenStereotypeData, response = "y", between.s = 
-c("condition", "sex"), contrast = "all.pairwise", effect = c("condition", "sex"))
-pairwise_trimmed = welchADF.test(womenStereotypeData, response = "y", between.s = 
-c("condition", "sex"), contrast = "all.pairwise", effect = c("condition", "sex"), 
-  trimming = TRUE)
-pairwise_trimmed_boot = welchADF.test(womenStereotypeData, response = "y", between.s = 
-  c("condition", "sex"), contrast = "all.pairwise", effect = c("condition", "sex"), 
-  trimming = TRUE, bootstrap = TRUE)
+# Omnibus contrast only of those effects included, namely condition and sex (no interaction)
+omnibus_LSM_formula <- welchADF.test(y ~ condition + sex, data = womenStereotypeData)
+# Works well with update.default() method
+omnibus_interact_formula <- update(omnibus_LSM_formula, . ~ condition*sex)
+summary(omnibus_LSM_formula)
+summary(omnibus_interact_formula)
+
+# Fit a linear model using the built-in function stats::lm
+lm.women <- lm(y ~ condition + sex, womenStereotypeData)
+
+# Fit an Analysis of Variance model using the built-in function stats::aov
+aov.women <- aov(lm.women)
+
+# Now use the this object to apply a welchADF test to the same formula and data
+omnibus_no_interact <- welchADF.test(lm.women, contrast = "omnibus")
+omnibus_no_interactB <- welchADF.test(aov.women) # omnibus as well
+
+# Integrates well with the update.default() method
+omnibus_interact <- update(omnibus_no_interact, . ~ condition*sex)
+summary(omnibus_no_interact)
+summary(omnibus_interact)
+# Two-way factorial design using the default interface. See the vignette.
+omnibus_LSM <- welchADF.test(womenStereotypeData, response = "y", between.s = 
+  c("condition", "sex"), contrast = "omnibus")
+# Method update() also works with the welchADF.test.default interface
+omnibus_trimmed <- update(omnibus_LSM, effect = "condition", trimming = TRUE)
+pairwise_LSM <- update(omnibus_LSM, contrast = "all.pairwise", effect = c("condition", "sex"))
+pairwise_trimmed <- update(pairwise_LSM, trimming = TRUE) # just trimming
+pairwise_trimmed_boot <- update(pairwise_trimmed, bootstrap = TRUE) # trimming and bootstrapping
 summary(omnibus_LSM)
-summary(pairwise_LSM)
+pairwise_LSM
 summary(pairwise_trimmed_boot)
 }
 \references{
@@ -109,5 +188,12 @@ Efron, B., & Tibshirani, R. (1986). Bootstrap methods for standard errors, confi
 \emph{Statistical Science}, 1, 54-75.
 }
 \seealso{
-\code{\link{p.adjust.methods}}
+\code{\link[welchADF]{print.welchADFt}}, \code{\link[welchADF]{summary.welchADFt}}
+
+\code{\link{p.adjust.methods}} 
+  \code{\link{perceptionData}}
+  \code{\link{adhdData}}
+  \code{\link{adhdData2}}
+  \code{\link{womenStereotypeData}}
+  \code{\link{miceData}}
 }

@@ -22,6 +22,16 @@ The students are divided into three balanced groups as they had previously been 
 imagine solving puzzles in the distant future, near future, or not to imagine anything at all 
 (control group).
 }
+\examples{
+omnibus_LSM <- welchADF.test(perceptionData, response = "y", between.s = "Group")
+omnibus_trimmed <- update(omnibus_LSM, trimming = TRUE)
+omnibus_trimmed_boot <- update(omnibus_trimmed, bootstrap = TRUE, seed = 12345)
+pairwise_LSM <- update(omnibus_LSM, effect = "Group", contrast = "all.pairwise")
+pairwise_trimmed <- update(pairwise_LSM, trimming = TRUE, effect.size = TRUE)
+pairwise_trimmed_boot <- update(pairwise_trimmed, bootstrap = TRUE, seed = 12345)
+summary(omnibus_LSM)
+summary(pairwise_trimmed_boot, digits = 6) # digits defaults to max(4, getOption("digits"))
+}
 \references{
 Forster, J., Liberman, N., & Friedman, R.S. (2004). Temporal construal effects on
 abstract and concrete thinking: consequences for insight and creative cognition.

@@ -115,8 +115,6 @@
     result.list$CI = c(lcl, ucl)
   }
   
-  class(result.list) = "WelchTestObj"
-  
   return(result.list)
 }
 

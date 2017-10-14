@@ -140,7 +140,6 @@ wjglm <- function(Cmat, Umat, y, nx, trimming, per, bootstrap, numsim_b, effect.
 		
 	}
 	
-	class(result.list) = "WelchTestObj"
 	return(result.list)
 }
 

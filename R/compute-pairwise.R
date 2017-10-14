@@ -378,6 +378,7 @@
 		  names(all.results) = names.all.U
 		}
 		
+		
 		if(bootstrap){
 		  ## ----------------------------------------	
 	    ##  Compute the single bootstrap critical value for the whole test
@@ -391,28 +392,6 @@
 	    for(i in 1:length(all.results)){ # enhance the list by setting fmat to NULL
 	      all.results$fmat = NULL
 	    }
-	    
-		  mat = sapply(all.results, FUN = function(object, effect.size, critv){ 
-		    if(effect.size){
-		      c(object$welch.T, object$numeratorDF, object$denominatorDF, as.integer(object$welch.T > critv), object$effsz)
-		    }
-		    else{
-		      c(object$welch.T, object$numeratorDF, object$denominatorDF, as.integer(object$welch.T > critv))
-		    }
-		    
-		  }, effect.size = effect.size, critv = critv)
-		  mat = t(mat)
-		  
-		  # With bootstrap we do not use p-values
-		  if(effect.size){
-		    colnames(mat) = c("WJ statistic", "Numerator DF", "Denominator DF", "significant?", "eff.size")
-		  }
-		  else{
-		    colnames(mat) = c("WJ statistic", "Numerator DF", "Denominator DF", "significant?")
-		  }
-		  
-		  rownames(mat) = sapply(all.results, FUN = "[[", "effect.name")
-		  attr(all.results, "summary") = mat	
 		}
 		else{
 		  ## ----------------------------------------	
@@ -423,34 +402,16 @@
 		  adj.pvalues = p.adjust(all.pvalues, method = correction)
 		  for(i in 1:length(all.results)){
 		    all.results[[i]]$adj.pval = adj.pvalues[i]
-		  }
-		  mat = sapply(all.results, FUN = function(object, effect.size){
-		      if(effect.size){
-		        c(object$welch.T, object$numeratorDF, object$denominatorDF, object$pval, object$adj.pval, object$effsz)
-		      }
-	        else{
-	          c(object$welch.T, object$numeratorDF, object$denominatorDF, object$pval, object$adj.pval)
-	        }
-		  }, effect.size = effect.size)
-		  
-		  mat = t(mat)
-		  
-		  if(effect.size){
-		    colnames(mat) = c("WJ statistic", "Numerator DF", "Denominator DF", "pval", "adj.pval", "eff.size")
-		  }
-		  else{
-		    colnames(mat) = c("WJ statistic", "Numerator DF", "Denominator DF", "pval", "adj.pval")
-		  }
-		  
-		  rownames(mat) = sapply(all.results, FUN = "[[", "effect.name")
-		  attr(all.results, "summary") = mat			  
+		  }		  
 		}
-		class(all.results) = "WelchTestObjList"			
 		
+		class(all.results) = "welchADFt"			
+		
+		attr(all.results, "effect.size") = effect.size
 		attr(all.results, "type") = "all.pairwise"
 		attr(all.results, "correction") = correction
 		attr(all.results, "effect") = effect
-		attr(all.results, "bootcom") = bootstrap
+		attr(all.results, "bootstrap") = bootstrap
 		
 		return(all.results)
 }

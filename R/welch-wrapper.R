@@ -1,7 +1,194 @@
 ##' General Approximate Degrees of Freedom Solution for Inference and Estimation
 ##' 
-##' Computes the Welch-James statistic based on the SAS code by H.J. Keselman, R.R. Wilcox and L.M. Lix.
-##' @param data Data frame with one row for each observation of the response variable(s), and columns to indicate the factor combination to which it corresponds.
+##' Computes the Welch-James statistic with Approximate Degrees of Freedom, 
+##' based on the SAS code by H.J. Keselman, R.R. Wilcox and L.M. Lix.
+##'
+##' @param formula A data frame or a formula or an lm object returned by \code{\link[stats]{lm}}.
+##'   If \code{formula} is a data frame, it must have 
+##'   the format described for argument \code{data} of \code{welchADF.test} for class formula.
+##'   If \code{formula} is a formula, it must be a two-sided linear formula object describing the 
+##'   between-subjects effects of the model, with the response variable(s) (surrounded by \code{cbind()} 
+##'   if it is a multivariate response, as \code{cbind(r1, r2, r3)}) on the left of the ~ 
+##'   operator and the terms on the right. Within-subject factors must be specified as a parenthesis
+##'   term on the rhs with the form (w1*w2*...|subject) with 'subject' being the name of the 
+##'   subject ID column, which must be present in the data (cannot be omitted like in the data.frame version)
+##'   e.g. \code{cbind(y1,y2) ~ A*B*C + (B*C|subjet)}. In this example, A would be a between-subject
+##'   factor because it is the only variable not present again on the left side of the parenthesis term
+##'   (where the within-subjects factors are specified). Multi-level or customized structures are not supported, e.g.
+##'   those having strata or more than one random factor. The formula does not affect the results of the tests as 
+##'   no 'model' is actually fit to the data. It only affects the terms displayed as a result of an omnibus
+##'   contrast when no \code{effect} argument is given (which means \emph{run an omnibus test for every effect
+##'   or interaction (up to second order)}). In such case, the factors or interactions not specified in the formula
+##'   will not be applied an omnibus test. In case of a pairwise contrast, the structure in the formula is ignored
+##'   beyond interpreting which variables are between-subject factors and which are within-subjects factors.
+##' @param ... Further arguments to be passed to specialized methods. Should be named arguments.
+##' @return An object of class "welchADFt" which is a list of lists (one sub-list per effect, even if there is only one).
+##'   There are methods \code{\link[welchADF]{print.welchADFt}} and \code{\link[welchADF]{summary.welchADFt}}
+##' @seealso \code{\link[welchADF]{print.welchADFt}}, \code{\link[welchADF]{summary.welchADFt}}
+##' @export
+welchADF.test <- function(formula, ...){
+  UseMethod("welchADF.test")
+}
+
+##' @describeIn welchADF.test Specialized method that accepts a formula
+##' @export
+##' @method welchADF.test formula
+##' @param data A data.frame with the data, formatted as follows: one row per 
+##'   observation of the response variable(s), and as many columns as needed to indicate the 
+##'   factor combination to which the observation corresponds. If necessary, an extra column with
+##'   the subject ID for designs having within-subjects factors
+##'   (can be omitted if there is only one within-subjects factor, see the vignette).
+##' @param subset A specification of the rows to be used as in \code{\link[stats]{model.frame}}: defaults to all rows. 
+##'   This can be any valid indexing vector (see [.data.frame) for the rows of data 
+##'   or if that is not supplied, a data frame made up of the variables used in formula.
+##' @examples
+##' # Omnibus contrast only of those effects included, namely condition and sex (no interaction)
+##' omnibus_LSM_formula <- welchADF.test(y ~ condition + sex, data = womenStereotypeData)
+##' # Works well with update.default() method
+##' omnibus_interact_formula <- update(omnibus_LSM_formula, . ~ condition*sex)
+##' summary(omnibus_LSM_formula)
+##' summary(omnibus_interact_formula)
+welchADF.test.formula <- function(formula, data, subset, ...){
+  
+  arguments = list(...)
+
+  mf <- mc <- match.call()
+  
+  ## should do checks and tests as done in lme4::lFormula
+
+  ## plain copy from lme4::lFormula start
+  ## m stores the indices of those arguments
+  m <- match(c("data", "subset"), names(mf), 0L)
+  
+  mf <- mf[c(1L, m)]
+  mf$drop.unused.levels <- TRUE
+  mf[[1L]] <- quote(stats::model.frame)
+  fr.form <- subbars(formula) # substitute "|" by "+"
+  environment(fr.form) <- environment(formula)
+
+  mf$formula <- fr.form
+
+  fr <- eval(mf, parent.frame())
+
+  ## convert character vectors to factor (defensive)
+  fr <- factorize(fr.form, fr, char.only=TRUE)
+
+  ## store full, original formula
+  attr(fr,"formula") <- formula
+  
+  ## plain copy from lme4::lFormula end
+  terms <- attr(fr, "terms")
+  
+  ## find subject and within.s
+  within.s <- subject <- NULL
+  bars <- findbars(formula)
+  if (length(bars) > 1) {
+    stop("Please specify only one subject column.")
+  } else if (length(bars) == 1) {
+    subject <- toChar(bars[[1]][[3]])
+    within.s <- toChar(bars[[1]][[2]])
+  }
+  
+  ## response
+  response <- toChar(formula[[attr(terms, "response") + 1]])
+  
+  if (length(response) > 1) { ## multivariate
+    ## trick to make fr usuable
+    fr <- cbind(fr[[1]], fr[-1])
+    response <- response[response %in% colnames(fr)]
+  }
+  
+  ## between.s
+  fixedform <- formula
+  RHSForm(fixedform) <- nobars(RHSForm(fixedform))
+  candidates.between <- attr(terms(fixedform), "term.labels")
+  between.s <- candidates.between[!(
+    grepl(":", candidates.between, fixed = TRUE) |
+    candidates.between %in% within.s
+  )]
+  
+  # compose the complete list of the effects and interactions of the model, to be
+  # applied a separate omnibus test if required. Those interactions not present here
+  # will not be displayed in the result of the omnibus contrast
+  
+  effects.within = NULL
+  if(length(bars) == 1){
+    dummy.expression.within = as.character(as.expression(bars[[1]][[2]]))
+    dummy.within.formula = formula(paste0("~", dummy.expression.within))
+    effects.within = attr(terms(dummy.within.formula), "term.labels")
+  }  
+  only = unique(c(candidates.between, effects.within))
+
+  arguments[["formula"]] = fr
+  arguments[["response"]] = response
+  arguments[["between.s"]] = between.s
+  arguments[["within.s"]] = within.s
+  arguments[["subject"]] = subject
+  arguments[["only"]] = only
+  
+  wtestobj = do.call(welchADF.test.default, args = arguments)
+  # Store the original call so that the user can later call update()
+  # To avoid visibility problems, we replace the specialized function name by the generic
+  mc[[1]] = quote(welchADF.test)
+  wtestobj$call = mc
+  wtestobj$model = fr
+
+  wtestobj
+}
+
+##' @describeIn welchADF.test Specialized method that accepts a linear model object of class \code{\link[stats]{lm}}
+##' @export
+##' @method welchADF.test lm
+##' @examples
+##' 
+##' # Fit a linear model using the built-in function stats::lm
+##' lm.women <- lm(y ~ condition + sex, womenStereotypeData)
+##' 
+##' # Fit an Analysis of Variance model using the built-in function stats::aov
+##' aov.women <- aov(lm.women)
+##' 
+##' # Now use the this object to apply a welchADF test to the same formula and data
+##' omnibus_no_interact <- welchADF.test(lm.women, contrast = "omnibus")
+##' omnibus_no_interactB <- welchADF.test(aov.women) # omnibus as well
+##' 
+##' # Integrates well with the update.default() method
+##' omnibus_interact <- update(omnibus_no_interact, . ~ condition*sex)
+##' summary(omnibus_no_interact)
+##' summary(omnibus_interact)
+welchADF.test.lm <- function(formula, ...) {
+  ## get original call
+  mc <- getCall(formula)
+  
+  ## should probably clean up call as to avoid warnings
+  ## now add args from ...
+  args <- list(...)
+  for(arg in names(args)) {
+    mc[[arg]] <- args[[arg]]
+  }
+  mc[[1L]] <- quote(welchADF.test)
+  
+  wtestobj <- eval(mc, parent.frame())
+  
+  # store the call so the user can later call update()
+  # To avoid visibility problems, we replace the specialized function name by the generic
+  wtestobj$call <- mc
+  
+  wtestobj
+}
+
+##' @describeIn welchADF.test Specialized method that accepts an Analysis of Variance Model of class \code{\link[stats]{aov}}
+##' @method welchADF.test aov
+##' @export
+welchADF.test.aov <- welchADF.test.lm
+
+##' @describeIn welchADF.test Specialized method that accepts a Linear Mixed-Effects Model of class \code{\link[lme4]{lmer}}
+##' @method welchADF.test lmer
+##' @export
+welchADF.test.lmer <- welchADF.test.lm
+
+##' @describeIn welchADF.test Default method that accepts a data.frame (see argument \code{formula}) and where 
+##'   factors are passed as strings corresponding to column names
+##' @export
 ##' @param response A string or vector of strings with the name(s) of the column(s) of \code{data} corresponding to the response variable(s). If 
 ##'		a vector of strings is provided, the responses are taken as a set of repeated measurements or dependent variables.
 ##' @param between.s Vector of strings with the columns that correspond to between-subjects factors.
@@ -17,7 +204,7 @@
 ##'		contrasts will be applied. 
 ##'		If \code{contrast = "all.pairwise"}, then \code{effect} must be \emph{a tagged list} in which the names are the factors, and the elements must be vectors of two strings
 ##'		each, indicating 
-##'		If \code{contrast = "omnibus"} but \code{effect} is not specified, then an omnibus contrast will be done separately for each of the effects.
+##'		If \code{contrast = "omnibus"} but \code{effect} is not specified, then an omnibus contrast will be done separately for each of the effects and also all possible interactions.
 ##'		If \code{contrast = "omnibus"} and \code{effect} is a vector of strings, then only \emph{one} contrast will be done, involving the simultaneous interaction of all effects
 ##'		indicated in the \code{effect} vector (i.e. no other interaction or main effect contrasts will be performed).
 ##' @param correction The type of p-value correction when applying multiple pariwise comparisons (i.e. when \code{contrast = "all.pairwise"}). Defaults to "hochberg".
@@ -52,323 +239,134 @@
 ##' \emph{Statistics in Medicine}, 19, 1141-1164. 
 ##' @references Efron, B., & Tibshirani, R. (1986). Bootstrap methods for standard errors, confidence intervals, and other measures of statistical accuracy. 
 ##' \emph{Statistical Science}, 1, 54-75. 
-##' @seealso \code{\link{p.adjust.methods}}
+##' @seealso \code{\link{p.adjust.methods}} 
+##'   \code{\link{perceptionData}}
+##'   \code{\link{adhdData}}
+##'   \code{\link{adhdData2}}
+##'   \code{\link{womenStereotypeData}}
+##'   \code{\link{miceData}}
 ##' @examples
-##' # Two-way factorial design. See the vignette
-##' omnibus_LSM = welchADF.test(womenStereotypeData, response = "y", between.s = 
-##' c("condition", "sex"), contrast = "omnibus")
-##' omnibus_trimmed = welchADF.test(womenStereotypeData, response = "y", between.s = 
-##' c("condition", "sex"), contrast = "omnibus", trimming = TRUE)
-##' pairwise_LSM = welchADF.test(womenStereotypeData, response = "y", between.s = 
-##' c("condition", "sex"), contrast = "all.pairwise", effect = c("condition", "sex"))
-##' pairwise_trimmed = welchADF.test(womenStereotypeData, response = "y", between.s = 
-##' c("condition", "sex"), contrast = "all.pairwise", effect = c("condition", "sex"), 
-##'   trimming = TRUE)
-##' pairwise_trimmed_boot = welchADF.test(womenStereotypeData, response = "y", between.s = 
-##'   c("condition", "sex"), contrast = "all.pairwise", effect = c("condition", "sex"), 
-##'   trimming = TRUE, bootstrap = TRUE)
+##' # Two-way factorial design using the default interface. See the vignette.
+##' omnibus_LSM <- welchADF.test(womenStereotypeData, response = "y", between.s = 
+##'   c("condition", "sex"), contrast = "omnibus")
+##' # Method update() also works with the welchADF.test.default interface
+##' omnibus_trimmed <- update(omnibus_LSM, effect = "condition", trimming = TRUE)
+##' pairwise_LSM <- update(omnibus_LSM, contrast = "all.pairwise", effect = c("condition", "sex"))
+##' pairwise_trimmed <- update(pairwise_LSM, trimming = TRUE) # just trimming
+##' pairwise_trimmed_boot <- update(pairwise_trimmed, bootstrap = TRUE) # trimming and bootstrapping
 ##' summary(omnibus_LSM)
-##' summary(pairwise_LSM)
+##' pairwise_LSM
 ##' summary(pairwise_trimmed_boot)
-welchADF.test <- function(data, response, between.s, within.s = NULL, subject = NULL, contrast = c("omnibus", "all.pairwise"), 
-			effect = NULL, correction = c("hochberg", "holm"), trimming = FALSE, per=0.2, bootstrap = FALSE, 
-			numsim_b = 999, effect.size = FALSE, numsim_es = 999, scaling = TRUE, standardize.effsz = TRUE, alpha = 0.05, seed = 0){
-	
-	contrast = match.arg(contrast)
-	correction = match.arg(correction)
-	
-	## ----------------------------------------
-	##		CHECK ALL PARAMETERS ARE VALID
-	## ----------------------------------------
-	.check.parameters(data, response, between.s, 
-	                  within.s, subject, effect, 
-	                  contrast, correction, bootstrap, trimming,
-	                  scaling, standardize.effsz, effect.size, per, 
-	                  numsim_b, numsim_es, alpha)
-	## ----------------------------------------
-
-	if(effect.size && (contrast != "all.pairwise")){
-	  effect.size = FALSE
-	}
-	
-	if(!is.null(within.s)){
-  	if(within.s == "multivariate"){
-  	  # turn several response columns into one, adding an explicit within-suject column
-  	  templist = .reshape.implicit.withins(data, response, subject)
-  	  data = templist$data
-  	  response = templist$response
-  	  within.s = templist$within.s
-  	  subject = templist$subject
-  	}
-	}
-	
-	frameNames = names(data)	
-	ncols = ncol(data)
-	factorColumns = (1:ncols)[!(frameNames %in% response)]
-	columns.between.s = (1:ncols)[(frameNames %in% between.s)]
-	columns.within.s = (1:ncols)[(frameNames %in% within.s)]
-	
-	
-	## turn into factor those columns that are not part of the response columns and are not factors yet
-	for(i in 1:length(factorColumns)){
-		if(!is.factor(data[[factorColumns[i]]])){
-			data[[factorColumns[i]]] = as.factor(data[[factorColumns[i]]])
-		}
-	}
-	
-	## ------------------------------------------
-	if(!is.null(subject)){
-		if(!is.factor(subject)){
-			data[[subject]] = as.factor(data[[subject]])
-		}
-	}
-
-	nlevelslist = lapply(data[factorColumns], FUN = nlevels)
-	
-	formatted.data = .reshape.data(data, response, between.s, within.s, subject, nlevelslist)	
-	y = formatted.data[[1]]
-	nx = formatted.data[[2]]
-
-  levelslist.between.s = lapply(data[columns.between.s], FUN = levels)  
-	levelslist.within.s = lapply(data[columns.within.s], FUN = levels)
-
-	if(contrast == "omnibus"){
-		## ----------------------------------------
-		##					OMNIBUS CONTRASTS
-		## ----------------------------------------		
-
-		omnibus.results = .compute.omnibus(
-		  data = data, response = response, between.s = between.s, within.s = within.s, 
-		  subject = subject, effect = effect, trimming = trimming, per = per, 
-		  bootstrap = bootstrap, numsim_b = numsim_b, effect.size = effect.size, 
-		  numsim_es = numsim_es, standardizer = standardize.effsz, scaling = scaling, 
-		  alpha = alpha, seed = seed, y = y, nx = nx, 
-		  levelslist.between.s = levelslist.between.s, levelslist.within.s = levelslist.within.s)
-	
-		return(omnibus.results)
-	}		
-	else if(contrast == "all.pairwise"){
-		## ----------------------------------------
-		##		ALL PAIRWISE CONTRASTS OF ONE EFFECT LEVELS
-		## ----------------------------------------	
-		##	NOTE: only pairwise comparisons of marginal means
-		##  or 2-way interactions via tetrad contrasts are implemented
-		## ----------------------------------------	
-		if(bootstrap){
-		  numsim_b = 699 # for FWER control via bootstrapping we set numsim_bc to 699 instead of 999
-		}
-	  
-		pairwise.results = .compute.pairwise(
-		  data = data, response = response, between.s = between.s, within.s = within.s, 
-		  subject = subject, effect = effect, correction = correction, trimming = trimming, 
-		  per = per, bootstrap = bootstrap, numsim_b = numsim_b, effect.size = effect.size, 
-		  numsim_es = numsim_es, standardizer = standardize.effsz, 
-		  scaling = scaling, alpha = alpha, seed = seed, y = y, nx = nx, 
-		  levelslist.between.s = levelslist.between.s, levelslist.within.s = levelslist.within.s)
-		
-		return(pairwise.results)
-						
-	}	# if contrast == "all.pairwise"
-}
-
-# ______________________________________________________
-
-.reshape.data <- function(data, response, between.s, within.s, subject, nlevelslist){
-
-	frameNames = names(data)
-	ncols = ncol(data)
-
-	columns.between.s = (1:ncols)[(frameNames %in% between.s)]
-	columns.within.s = (1:ncols)[(frameNames %in% within.s)]	
-	subject.col = (1:ncols)[frameNames == subject]
-	nsubjects = 0
-	repetitions.per.subject = NULL
-	if(is.null(subject)){ 
-		subject = integer(0) 
-		nsubjects = 0
-	}
-	else{
-			nsubjects = nlevels(data[[subject]])
-			nlevels.within = unlist(nlevelslist[within.s])
-			repetitions.per.subject = sum(nlevels.within)
-	}
-	
-	responseColumns = match(response, frameNames)
-	
-	# IMPORTANT: first, the between-subject factors, then the subject column, 
-  # and last the within-subject factors
+welchADF.test.default <- function(formula, response, between.s, within.s = NULL, subject = NULL, contrast = c("omnibus", "all.pairwise"), 
+                                     effect = NULL, correction = c("hochberg", "holm"), trimming = FALSE, per=0.2, bootstrap = FALSE, 
+                                     numsim_b = 999, effect.size = FALSE, numsim_es = 999, scaling = TRUE, standardize.effsz = TRUE, alpha = 0.05, seed = 0, ...){
   
-	allData = data[ , c(columns.between.s, subject.col, columns.within.s)]
-	
-	betweenSubjectData = data[,columns.between.s]
-	tablecount = table(betweenSubjectData)
-	if(nsubjects>0){
-		tablecount = tablecount/repetitions.per.subject
-	}
-	r = as.data.frame(tablecount)
-	
-	if(sum(r[["Freq"]] == 0) > 0){
-		stop("Data corresponding to some between-subjects factor combination(s) are missing: ")
-	}
-
-	orderedfactors = do.call(order, args = as.list(betweenSubjectData))
-	if(length(between.s) == 1){
-    orderedfactors = do.call(order, args = list(betweenSubjectData))
+  data = formula
+  contrast = match.arg(contrast)
+  correction = match.arg(correction)
+  
+  ## ----------------------------------------
+  ##		CHECK ALL PARAMETERS ARE VALID
+  ## ----------------------------------------
+  .check.parameters(data, response, between.s, 
+                    within.s, subject, effect, 
+                    contrast, correction, bootstrap, trimming,
+                    scaling, standardize.effsz, effect.size, per, 
+                    numsim_b, numsim_es, alpha)
+  ## ----------------------------------------
+  
+  if(effect.size && (contrast != "all.pairwise")){
+    effect.size = FALSE
   }
-	orderedcombinations = do.call(order, args = as.list(r[,1:(ncol(r)-1)]))
-	if(ncol(r) == 2){	# correct for this special case
-		orderedcombinations = order(r[[1]])
-	}
-
-	## ----------------------------------------------------------------
-	##  COMPUTE VECTOR nx OF NUMBER OF OBSERVATIONS FOR EACH CELL
-	##				(i.e. EACH BETWEEN-FACTORS COMBINATION)
-	## ----------------------------------------------------------------
-	r = r[orderedcombinations,]	
-	cnms = colnames(r)	
-	colnames(r) = cnms
-	nx = r[["Freq"]]
-	## ----------------------------------------------------------------
-
-	ordered.all = do.call(order, args = as.list(allData))		
-	responses.only = data[ordered.all, response]	# response can be more than one column (multivariate responses)
-	y = NULL
-	
-	if(nsubjects > 0){	# there are repeated measures (within-subjects factors)
-		y = matrix(data = as.vector(t(responses.only)), nrow = nsubjects, byrow = TRUE)
-	}
-	else{	# there are no repeated measures
-		y = as.matrix(data[orderedfactors, response])
-	}
-
-	return(list(y, nx, r))
-}
-
-# ______________________________________________________
-
-.check.parameters <- function(data, response, between.s, within.s, subject, effect, contrast, correction, bootstrap, trimming,
-                              scaling, standardize.effsz, effect.size, per, 
-                              numsim_b, numsim_es, alpha){
-
-	frameNames = names(data)	
-	if(is.null(response)){
-		stop("ERROR: at least one non-null response column must always be provided")
-	}
-	
-	if(is.null(between.s) && is.null(within.s)){
-		stop("ERROR: there must be at least one between-subject or one within-subject effect. Both cannot be null simultaneously")
-	}
-
-
-  for(i in 1:length(response)){
-    if(!(response[i] %in% frameNames)){
-      stop("ERROR: response ",response[[i]]," not found in the data")
+  
+  if(!is.null(within.s)){
+    if(within.s == "multivariate"){
+      # turn several response columns into one, adding an explicit within-suject column
+      templist = .reshape.implicit.withins(data, response, subject)
+      data = templist$data
+      response = templist$response
+      within.s = templist$within.s
+      subject = templist$subject
     }
   }
-	
-	if(length(response) == 1 && "multivariate" %in% within.s){
-	  stop("ERROR: within.s vector contains \"multivariate\" but there is only one response column, hence there is no implicit within-subject factor")
-	}
-
-  if(length(effect) > 0){
-		for(i in 1:length(effect)){
-			if(!(effect[i] %in% frameNames) && effect[i] != "multivariate"){
-				stop("ERROR: effect ", effect[i], " not found in the data")
-			}
-		}
+  
+  frameNames = names(data)	
+  ncols = ncol(data)
+  factorColumns = (1:ncols)[!(frameNames %in% response)]
+  columns.between.s = (1:ncols)[(frameNames %in% between.s)]
+  columns.within.s = (1:ncols)[(frameNames %in% within.s)]
+  
+  
+  ## turn into factor those columns that are not part of the response columns and are not factors yet
+  for(i in 1:length(factorColumns)){
+    if(!is.factor(data[[factorColumns[i]]])){
+      data[[factorColumns[i]]] = as.factor(data[[factorColumns[i]]])
+    }
   }
-
-	if(length(between.s) > 0){
-		for(i in 1:length(between.s)){
-			if(!(between.s[i] %in% frameNames)){
-				stop("ERROR: between-subject effect ", between.s[i], " not found in the data")
-			}
-		}
+  
+  ## ------------------------------------------
+  if(!is.null(subject)){
+    if(!is.factor(subject)){
+      data[[subject]] = as.factor(data[[subject]])
+    }
   }
-
-  if(length(within.s) > 0){
-		for(i in 1:length(within.s)){
-			if(!(within.s[i] %in% frameNames) && within.s[i] != "multivariate"){
-				stop("ERROR: within-subject effect ", within.s[i], " not found in the data")
-			}
-		}
-  }
+  
+  nlevelslist = lapply(data[factorColumns], FUN = nlevels)
+  
+  formatted.data = .reshape.data(data, response, between.s, within.s, subject, nlevelslist)	
+  y = formatted.data[[1]]
+  nx = formatted.data[[2]]
+  
+  levelslist.between.s = lapply(data[columns.between.s], FUN = levels)  
+  levelslist.within.s = lapply(data[columns.within.s], FUN = levels)
+  
+  if(contrast == "omnibus"){
+    ## ----------------------------------------
+    ##					OMNIBUS CONTRASTS
+    ## ----------------------------------------		
     
-	if(contrast == "all.pairwise" && !(length(effect) == 1 || length(effect)==2)){	
-			stop("ERROR: parameter effect must be a vector of 1 or 2 elements to compute all pairwise comparisons between the levels of that effect or interaction")
-	}
-	
-	if(length(subject) > 1){
-		stop("ERROR: the subject must be indicated in exactly one column, not more than one")
-	}	
-	
-	if(!is.logical(trimming)){
-	  stop("ERROR: argument trimming must be given a boolean value, either TRUE or FALSE")
-	}
-	if(!is.logical(bootstrap)){
-	  stop("ERROR: argument bootstrap must be given a boolean value, either TRUE or FALSE")
-	}	
-	
-	if( bootstrap && !trimming ){
-	  warning("attempting to use bootstrapping without trimming. Consider setting trimming = TRUE")
-	}
-	
-	if(!is.logical(scaling)){
-	  stop("ERROR: Argument scaling must be given a boolean value, either TRUE or FALSE")
-	}
-	
-	if(!is.logical(standardize.effsz)){
-	  stop("ERROR: Argument standardize.effsz must be given a boolean value, either TRUE or FALSE")
-	}
-	
-	if(effect.size && (contrast != "all.pairwise")){
-	  warning("attempting to compute effect size in a contrast different than all.pairwise. No effect size will be calculated.")
-	}
-	
-	if(numsim_b < 0 || numsim_es < 0){
-	  stop("ERROR: Arguments numsim_b and numsim_es must take a positive integer value")
-	}
-
-	if(trimming && (per < 0 || per > 0.49)){
-	  stop("ERROR: argument per must be between 0 and 0.49")
-	}
-	
-  valid_condition1 = ( is.null(within.s) && is.null(subject) )
-  valid_condition2 = ( !is.null(within.s) && !is.null(subject) )
-  valid_condition3 = FALSE
-  if( length(within.s) == 1 ){
-    valid_condition3 = ( within.s == "multivariate" && is.null(subject) )
-  }
-  if(! ( valid_condition1 || valid_condition2 || valid_condition3 ) ){
-    stop(paste0("ERROR: a non-null subject column must always be accompanied by at least one within-subject column name and viceversa,\n",
-                "except when within.s = \"multivariate\". If there are no within-subjects effects, leave the subject argument blank"))
-  }
-}
-
-# ______________________________________________________
-
-.reshape.implicit.withins <- function(data, response, subject){
-  
-  mynames = colnames(data)
-  newnames = sapply(mynames, FUN = function(x, response){ 
-    if(x %in% response){ 
-      paste0("response.",x) # so that we later call reshape() and get a single
-    }                       # column called "response" and the levels of the 
-    else{ x }               # new multivariate factor are each of the .x
-  }, response)
-  colnames(data) = newnames  
-  
-  varying = paste0("response.", response)  
-  mysubject = subject
-  if(is.null(subject)){
-    # This means the multivariate is the only within-subjects effects, therefore
-    # each row corresponds to a different subject
-    data$subject = 1:nrow(data)
-    mysubject = "subject"
-  }
-  
-  newdata = reshape(data, varying = varying, direction = "long", timevar = "multivariate")
-  rownames(newdata) = NULL
-  newdata = subset(newdata, select = -get("id"))
-  return(list(data = newdata, response = "response", within.s = "multivariate", subject = mysubject))
+    omnibus.results = .compute.omnibus(
+      data = data, response = response, between.s = between.s, within.s = within.s, 
+      subject = subject, effect = effect, trimming = trimming, per = per, 
+      bootstrap = bootstrap, numsim_b = numsim_b, effect.size = effect.size, 
+      numsim_es = numsim_es, standardizer = standardize.effsz, scaling = scaling, 
+      alpha = alpha, seed = seed, y = y, nx = nx, 
+      levelslist.between.s = levelslist.between.s, levelslist.within.s = levelslist.within.s,
+      only = list(...)[["only"]])
+    
+    omnibus.results$call = match.call() # this might replaced by any other non-default specialized function
+                                        # if this function was called from welchADF.formula, welchADF.lm, lme, etc
+    
+    # replace the specialized function name by the generic to avoid visibility problems
+    omnibus.results$call[[1]] = as.symbol("welchADF.test") 
+    return(omnibus.results)
+  }		
+  else if(contrast == "all.pairwise"){
+    ## ----------------------------------------
+    ##		ALL PAIRWISE CONTRASTS OF ONE EFFECT LEVELS
+    ## ----------------------------------------	
+    ##	NOTE: only pairwise comparisons of marginal means
+    ##  or 2-way interactions via tetrad contrasts are implemented
+    ## ----------------------------------------	
+    if(bootstrap){
+      numsim_b = 699 # for FWER control via bootstrapping we set numsim_bc to 699 instead of 999
+    }
+    
+    pairwise.results = .compute.pairwise(
+      data = data, response = response, between.s = between.s, within.s = within.s, 
+      subject = subject, effect = effect, correction = correction, trimming = trimming, 
+      per = per, bootstrap = bootstrap, numsim_b = numsim_b, effect.size = effect.size, 
+      numsim_es = numsim_es, standardizer = standardize.effsz, 
+      scaling = scaling, alpha = alpha, seed = seed, y = y, nx = nx, 
+      levelslist.between.s = levelslist.between.s, levelslist.within.s = levelslist.within.s)
+    
+                                         # save the call
+    pairwise.results$call = match.call() # this might be replaced by any other non-default specialized function
+                                         # if this function was called from welchADF.formula, welchADF.lm, lme, etc
+    
+    # replace the specialized function name by the generic to avoid visibility problems
+    pairwise.results$call[[1]] = as.symbol("welchADF.test") 
+    return(pairwise.results)
+    
+  }	# if contrast == "all.pairwise"
 }
