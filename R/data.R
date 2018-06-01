@@ -15,15 +15,14 @@
 ##' abstract and concrete thinking: consequences for insight and creative cognition.
 ##' Journal of Personality and Social Psychology, 87, 2, 177-189.
 ##' 
-##' @source \url{http://homepage.usask.ca/~lml321/Example1.pdf}
+##' @source \url{http://supp.apa.org/psycarticles/supplemental/met_13_2_110/Example_1_%20OneWay_Independent_Groups_Design.pdf}
 ##' 
 ##' @examples 
 ##' omnibus_LSM <- welchADF.test(perceptionData, response = "y", between.s = "Group")
 ##' omnibus_trimmed <- update(omnibus_LSM, trimming = TRUE)
-##' omnibus_trimmed_boot <- update(omnibus_trimmed, bootstrap = TRUE, seed = 12345)
 ##' pairwise_LSM <- update(omnibus_LSM, effect = "Group", contrast = "all.pairwise")
 ##' pairwise_trimmed <- update(pairwise_LSM, trimming = TRUE, effect.size = TRUE)
-##' pairwise_trimmed_boot <- update(pairwise_trimmed, bootstrap = TRUE, seed = 12345)
+##' pairwise_trimmed_boot <- update(pairwise_trimmed, bootstrap = TRUE, seed = 12345, numsim_b = 600)
 ##' summary(omnibus_LSM)
 ##' summary(pairwise_trimmed_boot, digits = 6) # digits defaults to max(4, getOption("digits"))
 "perceptionData"
@@ -47,7 +46,7 @@
 ##' @references J.Wicherts, C. Dolan, and D. Hessen. Stereotype threat and group differences in test performance: 
 ##' a question of measurement invariance. Journal of Personality and Social Psychology, 89(5):696-716, 2005.
 ##' 
-##' @source \url{http://homepage.usask.ca/~lml321/Example2.pdf}
+##' @source \url{http://supp.apa.org/psycarticles/supplemental/met_13_2_110/Example_2_Factorial_Independent_Groups_Design.pdf}
 ##' 
 ##' @examples
 ##' omnibus_LSM <- welchADF.test(womenStereotypeData, response = "y", between.s =

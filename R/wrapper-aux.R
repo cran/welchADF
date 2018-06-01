@@ -42,7 +42,7 @@ RHSForm <- function(form,as.form=FALSE) {
   else{
     nsubjects = nlevels(data[[subject]])
     nlevels.within = unlist(nlevelslist[within.s])
-    repetitions.per.subject = sum(nlevels.within)
+    repetitions.per.subject = prod(nlevels.within)
   }
   
   responseColumns = match(response, frameNames)

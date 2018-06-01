@@ -9,9 +9,6 @@
   \item{Group}{group of the student (what the student was asked to imagine)}
   \item{y}{number of puzzles the student was able to solve, out of 12}
 }}
-\source{
-\url{http://homepage.usask.ca/~lml321/Example1.pdf}
-}
 \usage{
 perceptionData
 }
@@ -25,10 +22,10 @@ imagine solving puzzles in the distant future, near future, or not to imagine an
 \examples{
 omnibus_LSM <- welchADF.test(perceptionData, response = "y", between.s = "Group")
 omnibus_trimmed <- update(omnibus_LSM, trimming = TRUE)
-omnibus_trimmed_boot <- update(omnibus_trimmed, bootstrap = TRUE, seed = 12345)
+omnibus_trimmed_boot <- update(omnibus_trimmed, bootstrap = TRUE, seed = 12345, numsim_b = 600)
 pairwise_LSM <- update(omnibus_LSM, effect = "Group", contrast = "all.pairwise")
 pairwise_trimmed <- update(pairwise_LSM, trimming = TRUE, effect.size = TRUE)
-pairwise_trimmed_boot <- update(pairwise_trimmed, bootstrap = TRUE, seed = 12345)
+pairwise_trimmed_boot <- update(pairwise_trimmed, bootstrap = TRUE, seed = 12345, numsim_b = 600)
 summary(omnibus_LSM)
 summary(pairwise_trimmed_boot, digits = 6) # digits defaults to max(4, getOption("digits"))
 }

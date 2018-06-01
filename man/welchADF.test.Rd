@@ -173,7 +173,7 @@ pairwise_LSM
 summary(pairwise_trimmed_boot)
 }
 \references{
-Home page of Prof. Lisa M. Lix, author of the original SAS code: \url{http://homepage.usask.ca/~lml321/SAS_Programs.html}
+Website with the original SAS code and examples: \url{http://supp.apa.org/psycarticles/supplemental/met_13_2_110/met_13_2_110_supp.html}
 
 Keselman, H. J., Wilcox, R. R., & Lix, L. M. (2003). A generally robust approach to hypothesis testing in independent and correlated groups designs. 
 \emph{Psychophysiology}, 40, 586-596.

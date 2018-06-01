@@ -11,7 +11,7 @@
    \item{y}{score on the arithmetic test, out of 40}
 }}
 \source{
-\url{http://homepage.usask.ca/~lml321/Example2.pdf}
+\url{http://supp.apa.org/psycarticles/supplemental/met_13_2_110/Example_2_Factorial_Independent_Groups_Design.pdf}
 }
 \usage{
 womenStereotypeData

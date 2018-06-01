@@ -230,7 +230,7 @@ welchADF.test.lmer <- welchADF.test.lm
 ##' @param scaling Boolean; whether a scaling factor for the effect size estimator should be used (0.642 for 20\% symmetric trimming) when 
 ##' robust estimators are adopted. \code{FALSE} means no scaling factor will be used. \code{TRUE} indicates that a scaling factor will be adopted. Defaults to TRUE
 ##' @param standardize.effsz Boolean: whether the effect size should be standardized by the average of variances or not. Defaults to TRUE.
-##' @references Home page of Prof. Lisa M. Lix, author of the original SAS code: \url{http://homepage.usask.ca/~lml321/SAS_Programs.html}
+##' @references Website with the original SAS code and examples: \url{http://supp.apa.org/psycarticles/supplemental/met_13_2_110/met_13_2_110_supp.html}
 ##' @references Keselman, H. J., Wilcox, R. R., & Lix, L. M. (2003). A generally robust approach to hypothesis testing in independent and correlated groups designs. 
 ##' \emph{Psychophysiology}, 40, 586-596.
 ##' @references Lix, L. M., & Keselman, H. J. (1995). Approximate degrees of freedom tests: A unified perspective on testing for mean equality. 
