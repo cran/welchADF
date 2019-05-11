@@ -191,7 +191,7 @@ welchADF.test.lmer <- welchADF.test.lm
 ##' @export
 ##' @param response A string or vector of strings with the name(s) of the column(s) of \code{data} corresponding to the response variable(s). If 
 ##'		a vector of strings is provided, the responses are taken as a set of repeated measurements or dependent variables.
-##' @param between.s Vector of strings with the columns that correspond to between-subjects factors.
+##' @param between.s Vector of strings with the columns that correspond to between-subjects factors, if any (defaults to NULL).
 ##' @param within.s Vector of strings with the columns that correspond to within-subjects factors, if any (defaults to NULL).
 ##' @param subject Name of the column (if any) containing the subject ID (defaults to NULL).
 ##' @param contrast One of \code{"omnibus", "all.pairwise"} indicating the type of contrast to be performed with the data.
@@ -230,6 +230,8 @@ welchADF.test.lmer <- welchADF.test.lm
 ##' @param scaling Boolean; whether a scaling factor for the effect size estimator should be used (0.642 for 20\% symmetric trimming) when 
 ##' robust estimators are adopted. \code{FALSE} means no scaling factor will be used. \code{TRUE} indicates that a scaling factor will be adopted. Defaults to TRUE
 ##' @param standardize.effsz Boolean: whether the effect size should be standardized by the average of variances or not. Defaults to TRUE.
+##' @references Villacorta, P.J. (2017). The welchADF Package for Robust Hypothesis Testing in Unbalanced Multivariate Mixed Models with Heteroscedastic and Non-normal Data. 
+##' \emph{The R Journal}, 9:2, 309 - 328.
 ##' @references Website with the original SAS code and examples: \url{http://supp.apa.org/psycarticles/supplemental/met_13_2_110/met_13_2_110_supp.html}
 ##' @references Keselman, H. J., Wilcox, R. R., & Lix, L. M. (2003). A generally robust approach to hypothesis testing in independent and correlated groups designs. 
 ##' \emph{Psychophysiology}, 40, 586-596.
@@ -257,7 +259,7 @@ welchADF.test.lmer <- welchADF.test.lm
 ##' summary(omnibus_LSM)
 ##' pairwise_LSM
 ##' summary(pairwise_trimmed_boot)
-welchADF.test.default <- function(formula, response, between.s, within.s = NULL, subject = NULL, contrast = c("omnibus", "all.pairwise"), 
+welchADF.test.default <- function(formula, response, between.s = NULL, within.s = NULL, subject = NULL, contrast = c("omnibus", "all.pairwise"), 
                                      effect = NULL, correction = c("hochberg", "holm"), trimming = FALSE, per=0.2, bootstrap = FALSE, 
                                      numsim_b = 999, effect.size = FALSE, numsim_es = 999, scaling = TRUE, standardize.effsz = TRUE, alpha = 0.05, seed = 0, ...){
   

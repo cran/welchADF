@@ -1,0 +1,15 @@
+bibentry("Article",
+         title        = "The welchADF Package for Robust Hypothesis Testing in Unbalanced Multivariate Mixed Models with Heteroscedastic and Non-normal Data",
+         author       = person("Pablo J. Villacorta"),
+         year         = "2017",
+         url          = "https://journal.r-project.org/archive/2017/RJ-2017-049/index.html",
+         journal      = "The R Journal",
+         volume       = "9",
+         number       = "2",
+         doi          = "10.32614/RJ-2017-049",
+         pages        = "309 - 328",
+         textVersion  = paste("Pablo J. Villacorta (2017). ",
+               "The welchADF Package for Robust Hypothesis Testing in Unbalanced Multivariate Mixed Models with Heteroscedastic and Non-normal Data. ",
+               "The R Journal 9:2, 309 - 328.", sep=""),
+         mheader = "To cite package welchADF in publications use:"
+	)

@@ -16,7 +16,7 @@
 	unique.C.matrix = NULL
 	unique.U.matrix = NULL
 	
-	no.between.s.matrix = NULL
+	no.between.s.matrix = 1
 	no.within.s.matrix = NULL
 	all.between.s.results = NULL
 	all.within.s.results = NULL
@@ -62,7 +62,6 @@
 				colnames(terms.matrix.between.s) = between.s.formulastring
 
 				all.C.matrices = .compose.C.matrices(terms.matrix.between.s, levelslist.between.s)
-				#no.between.s.matrix = all.C.matrices[[1]]		  	
 				unique.C.matrix = all.C.matrices[[2]]	# drop first matrix corresponding to no between-subject effect 
 			}
 			else{
@@ -223,10 +222,10 @@
 	result[1:length(result)] = 1
 	
 	# drop row 1 which is all 0 corresponding to the non-existent y
-	formula.matrix = formula.matrix[2:nrow(formula.matrix),] 	
+	formula.matrix = formula.matrix[-1,] 	
 	if(!is.matrix(formula.matrix)){
 		formula.matrix = t(t(formula.matrix))
-		names(formula.matrix) = names(result)[2:length(names(result))]
+		names(formula.matrix) = names(result)[-1] # drop the first name
 	}
 			
 	nlevelsvec = sapply(levelslist, FUN = length)

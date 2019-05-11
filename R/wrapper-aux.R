@@ -52,35 +52,39 @@ RHSForm <- function(form,as.form=FALSE) {
   
   allData = data[ , c(columns.between.s, subject.col, columns.within.s)]
   
-  betweenSubjectData = data[,columns.between.s]
-  tablecount = table(betweenSubjectData)
-  if(nsubjects>0){
-    tablecount = tablecount/repetitions.per.subject
+  r = NULL
+  nx = NULL
+  if(!is.null(between.s)){
+    betweenSubjectData = data[,columns.between.s]
+    tablecount = table(betweenSubjectData)
+    if(nsubjects>0){
+      tablecount = tablecount/repetitions.per.subject
+    }
+    r = as.data.frame(tablecount)
+
+    if(sum(r[["Freq"]] == 0) > 0){
+      stop("Data corresponding to some between-subjects factor combination(s) are missing: ")
+    }
+    
+    orderedfactors = do.call(order, args = as.list(betweenSubjectData))
+    if(length(between.s) == 1){
+      orderedfactors = do.call(order, args = list(betweenSubjectData))
+    }
+    orderedcombinations = do.call(order, args = as.list(r[,1:(ncol(r)-1)]))
+    if(ncol(r) == 2){	# correct for this special case
+      orderedcombinations = order(r[[1]])
+    }
+
+    ## ----------------------------------------------------------------
+    ##  COMPUTE VECTOR nx OF NUMBER OF OBSERVATIONS FOR EACH CELL
+    ##				(i.e. EACH BETWEEN-FACTORS COMBINATION)
+    ## ----------------------------------------------------------------
+    r = r[orderedcombinations,]	
+    cnms = colnames(r)	
+    colnames(r) = cnms
+    nx = r[["Freq"]]
+    ## ----------------------------------------------------------------
   }
-  r = as.data.frame(tablecount)
-  
-  if(sum(r[["Freq"]] == 0) > 0){
-    stop("Data corresponding to some between-subjects factor combination(s) are missing: ")
-  }
-  
-  orderedfactors = do.call(order, args = as.list(betweenSubjectData))
-  if(length(between.s) == 1){
-    orderedfactors = do.call(order, args = list(betweenSubjectData))
-  }
-  orderedcombinations = do.call(order, args = as.list(r[,1:(ncol(r)-1)]))
-  if(ncol(r) == 2){	# correct for this special case
-    orderedcombinations = order(r[[1]])
-  }
-  
-  ## ----------------------------------------------------------------
-  ##  COMPUTE VECTOR nx OF NUMBER OF OBSERVATIONS FOR EACH CELL
-  ##				(i.e. EACH BETWEEN-FACTORS COMBINATION)
-  ## ----------------------------------------------------------------
-  r = r[orderedcombinations,]	
-  cnms = colnames(r)	
-  colnames(r) = cnms
-  nx = r[["Freq"]]
-  ## ----------------------------------------------------------------
   
   ordered.all = do.call(order, args = as.list(allData))		
   responses.only = data[ordered.all, response]	# response can be more than one column (multivariate responses)
@@ -91,6 +95,10 @@ RHSForm <- function(form,as.form=FALSE) {
   }
   else{	# there are no repeated measures
     y = as.matrix(data[orderedfactors, response])
+  }
+  
+  if(is.null(nx)){
+    nx = nrow(y)
   }
   
   return(list(y, nx, r))

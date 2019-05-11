@@ -54,7 +54,6 @@
 	if(is.vector(return.vars$r)){
     return.vars$r = t(return.vars$r)
 	}
-	
 	return.vars$x = x
 
 	return(return.vars)

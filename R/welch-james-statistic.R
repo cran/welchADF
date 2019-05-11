@@ -17,7 +17,7 @@ wjglm <- function(Cmat, Umat, y, nx, trimming, per, bootstrap, numsim_b, effect.
 	wobs = vars.initial$wobs 
 	wobs1 = vars.initial$wobs1 
 	bobs = vars.initial$bobs 	
-	r = vars.initial$r 		
+	r = vars.initial$r
 	x = vars.initial$x
 		
 	vars.mnmod = .mnmod(y,x,opt1,per, bobs,wobs,wobs1,ntot,nx)

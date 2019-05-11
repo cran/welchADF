@@ -19,12 +19,12 @@ welchADF.test(formula, ...)
 
 \method{welchADF.test}{lmer}(formula, ...)
 
-\method{welchADF.test}{default}(formula, response, between.s, within.s = NULL,
-  subject = NULL, contrast = c("omnibus", "all.pairwise"), effect = NULL,
-  correction = c("hochberg", "holm"), trimming = FALSE, per = 0.2,
-  bootstrap = FALSE, numsim_b = 999, effect.size = FALSE,
-  numsim_es = 999, scaling = TRUE, standardize.effsz = TRUE,
-  alpha = 0.05, seed = 0, ...)
+\method{welchADF.test}{default}(formula, response, between.s = NULL,
+  within.s = NULL, subject = NULL, contrast = c("omnibus",
+  "all.pairwise"), effect = NULL, correction = c("hochberg", "holm"),
+  trimming = FALSE, per = 0.2, bootstrap = FALSE, numsim_b = 999,
+  effect.size = FALSE, numsim_es = 999, scaling = TRUE,
+  standardize.effsz = TRUE, alpha = 0.05, seed = 0, ...)
 }
 \arguments{
 \item{formula}{A data frame or a formula or an lm object returned by \code{\link[stats]{lm}}.
@@ -61,7 +61,7 @@ or if that is not supplied, a data frame made up of the variables used in formul
 \item{response}{A string or vector of strings with the name(s) of the column(s) of \code{data} corresponding to the response variable(s). If 
 a vector of strings is provided, the responses are taken as a set of repeated measurements or dependent variables.}
 
-\item{between.s}{Vector of strings with the columns that correspond to between-subjects factors.}
+\item{between.s}{Vector of strings with the columns that correspond to between-subjects factors, if any (defaults to NULL).}
 
 \item{within.s}{Vector of strings with the columns that correspond to within-subjects factors, if any (defaults to NULL).}
 
@@ -173,6 +173,9 @@ pairwise_LSM
 summary(pairwise_trimmed_boot)
 }
 \references{
+Villacorta, P.J. (2017). The welchADF Package for Robust Hypothesis Testing in Unbalanced Multivariate Mixed Models with Heteroscedastic and Non-normal Data. 
+\emph{The R Journal}, 9:2, 309 - 328.
+
 Website with the original SAS code and examples: \url{http://supp.apa.org/psycarticles/supplemental/met_13_2_110/met_13_2_110_supp.html}
 
 Keselman, H. J., Wilcox, R. R., & Lix, L. M. (2003). A generally robust approach to hypothesis testing in independent and correlated groups designs. 
