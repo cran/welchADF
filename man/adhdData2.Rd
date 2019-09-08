@@ -40,7 +40,9 @@ pairwise_LSM <- welchADF.test(adhdData2, response = "Milliseconds", between.s = 
 pairwise_trimmed <- update(pairwise_LSM, trimming = TRUE)
   
 # Bootstrapping to obtain an empirical critical value
-pairwise_trimmed_boot <- update(pairwise_trimmed, bootstrap =TRUE, seed = 123456)
-summary(pairwise_trimmed_boot)
+\dontrun{
+  pairwise_trimmed_boot <- update(pairwise_trimmed, bootstrap =TRUE, seed = 123456)
+  summary(pairwise_trimmed_boot)
+}
 }
 \keyword{datasets}

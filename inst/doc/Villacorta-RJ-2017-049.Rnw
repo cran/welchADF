@@ -1,0 +1,7 @@
+\documentclass{article}
+\usepackage{pdfpages}
+%\VignetteIndexEntry{{The welchADF Package for Robust Hypothesis Testing in Unbalanced Multivariate Mixed Models with Heteroscedastic and Non-normal Data}}
+
+\begin{document}
+\includepdf[pages=-, fitpaper=true]{RJ-2017-049.pdf}
+\end{document}

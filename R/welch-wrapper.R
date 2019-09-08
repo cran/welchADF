@@ -255,10 +255,12 @@ welchADF.test.lmer <- welchADF.test.lm
 ##' omnibus_trimmed <- update(omnibus_LSM, effect = "condition", trimming = TRUE)
 ##' pairwise_LSM <- update(omnibus_LSM, contrast = "all.pairwise", effect = c("condition", "sex"))
 ##' pairwise_trimmed <- update(pairwise_LSM, trimming = TRUE) # just trimming
-##' pairwise_trimmed_boot <- update(pairwise_trimmed, bootstrap = TRUE) # trimming and bootstrapping
 ##' summary(omnibus_LSM)
 ##' pairwise_LSM
-##' summary(pairwise_trimmed_boot)
+##' \dontrun{
+##'   pairwise_trimmed_boot <- update(pairwise_trimmed, bootstrap = TRUE) # trimming and bootstrapping
+##'   summary(pairwise_trimmed_boot)
+##' }
 welchADF.test.default <- function(formula, response, between.s = NULL, within.s = NULL, subject = NULL, contrast = c("omnibus", "all.pairwise"), 
                                      effect = NULL, correction = c("hochberg", "holm"), trimming = FALSE, per=0.2, bootstrap = FALSE, 
                                      numsim_b = 999, effect.size = FALSE, numsim_es = 999, scaling = TRUE, standardize.effsz = TRUE, alpha = 0.05, seed = 0, ...){

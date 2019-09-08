@@ -31,11 +31,13 @@ omnibus_LSM <- welchADF.test(womenStereotypeData, response = "y", between.s =
 omnibus_trimmed <- update(omnibus_LSM, trimming = TRUE, effect = NULL) # unset value of "effect"
 pairwise_LSM <- update(omnibus_LSM, contrast = "all.pairwise", effect = c("condition", "sex"))
 pairwise_trimmed <- update(pairwise_LSM, trimming = TRUE)
-pairwise_trimmed_boot <- update(pairwise_trimmed, bootstrap = TRUE, seed = 12345)
 summary(omnibus_LSM)
 summary(omnibus_trimmed)
 summary(pairwise_trimmed)
-summary(pairwise_trimmed_boot)
+\dontrun{
+  pairwise_trimmed_boot <- update(pairwise_trimmed, bootstrap = TRUE, seed = 12345)
+  summary(pairwise_trimmed_boot)
+}
 }
 \references{
 J.Wicherts, C. Dolan, and D. Hessen. Stereotype threat and group differences in test performance: 

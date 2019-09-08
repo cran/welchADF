@@ -15,6 +15,10 @@
 		warning("Possible Error: Number Of Columns Of U Exceeds Number Of Rows")
 	}
 
+	if(is.null(Cmat)){
+	  Cmat = diag(1)
+	}
+	
 	x = rep(NA, sum(nx))	# preallocate vector
   temp = 1
 	for(i in 1:length(nx)){

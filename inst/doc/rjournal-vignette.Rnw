@@ -1,7 +1,0 @@
-\documentclass{article}
-\usepackage{pdfpages}
-%\VignetteIndexEntry{rjournalWelchADF2017}
-
-\begin{document}
-\includepdf[pages=-, fitpaper=true]{RJ-2017-049.pdf}
-\end{document}

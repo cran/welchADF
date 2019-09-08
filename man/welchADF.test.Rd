@@ -167,10 +167,12 @@ omnibus_LSM <- welchADF.test(womenStereotypeData, response = "y", between.s =
 omnibus_trimmed <- update(omnibus_LSM, effect = "condition", trimming = TRUE)
 pairwise_LSM <- update(omnibus_LSM, contrast = "all.pairwise", effect = c("condition", "sex"))
 pairwise_trimmed <- update(pairwise_LSM, trimming = TRUE) # just trimming
-pairwise_trimmed_boot <- update(pairwise_trimmed, bootstrap = TRUE) # trimming and bootstrapping
 summary(omnibus_LSM)
 pairwise_LSM
-summary(pairwise_trimmed_boot)
+\dontrun{
+  pairwise_trimmed_boot <- update(pairwise_trimmed, bootstrap = TRUE) # trimming and bootstrapping
+  summary(pairwise_trimmed_boot)
+}
 }
 \references{
 Villacorta, P.J. (2017). The welchADF Package for Robust Hypothesis Testing in Unbalanced Multivariate Mixed Models with Heteroscedastic and Non-normal Data. 
